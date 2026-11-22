@@ -1,4 +1,5 @@
 import json
+import pandas as pd
 from pathlib import Path
 
 PASTA_ARQUIVOS = Path(__file__).resolve().parent / "arquivos"
@@ -21,20 +22,21 @@ def salvar_dados(lista_paises):
     _salvar_json(CAMINHO_JSON, lista_paises)
 
 
-def carregar_clientes():
+def carregar_clientes() -> pd.DataFrame:
     """Lê clientes.json; devolve uma lista vazia se ainda não existir."""
     if not CAMINHO_CLIENTES_JSON.exists():
-        return []
+        return pd.DataFrame()
     try:
-        with CAMINHO_CLIENTES_JSON.open("r", encoding="utf-8") as arquivo:
-            dados = json.load(arquivo)
-        return dados if isinstance(dados, list) else []
+        df_clientes = pd.read_json(CAMINHO_CLIENTES_JSON)
+        return df_clientes
     except (json.JSONDecodeError, OSError):
-        return []
+        return pd.DataFrame()
 
 
 def salvar_clientes(clientes):
     """Persiste clientes em JSON usando substituição atômica do arquivo."""
+    if isinstance(clientes, pd.DataFrame):
+        clientes = clientes.to_dict(orient="records")
     _salvar_json(CAMINHO_CLIENTES_JSON, clientes)
 
 

@@ -1,16 +1,16 @@
 class NoB:
-    """Nó de uma Árvore B; listas armazenam chaves ordenadas e filhos do nó."""
+    """Nó de uma Árvore B; armazena chaves (CPFs) ordenadas, posições no arquivo e filhos."""
 
     def __init__(self, grau_minimo: int, folha: bool = True):
         self.grau_minimo = grau_minimo
         self.folha = folha
-        self.chaves: list[int] = []
-        self.valores: list[dict] = []
+        self.chaves: list[str] = []
+        self.valores: list[int] = []  # Armazena apenas a posição (índice da linha) no arquivo físico/DataFrame
         self.filhos: list[NoB] = []
 
 
 class ArvoreB:
-    """Árvore B indexada pelo ID inteiro do cliente (busca O(log n))."""
+    """Árvore B como índice primário: armazena (CPF -> posição no arquivo físico)."""
 
     def __init__(self, grau_minimo: int = 3):
         if grau_minimo < 2:
@@ -19,10 +19,12 @@ class ArvoreB:
         self.raiz = NoB(grau_minimo)
         self.quantidade = 0
 
-    def buscar(self, chave: int) -> dict | None:
-        return self._buscar_no(self.raiz, chave)
+    def buscar(self, chave: str | int) -> int | None:
+        """Busca o CPF na Árvore B e retorna a posição (linha no DataFrame), ou None."""
+        chave_str = str(chave).strip()
+        return self._buscar_no(self.raiz, chave_str)
 
-    def _buscar_no(self, no: NoB, chave: int) -> dict | None:
+    def _buscar_no(self, no: NoB, chave: str) -> int | None:
         indice = 0
         while indice < len(no.chaves) and chave > no.chaves[indice]:
             indice += 1
@@ -32,10 +34,25 @@ class ArvoreB:
             return None
         return self._buscar_no(no.filhos[indice], chave)
 
-    def inserir(self, valor: dict) -> bool:
-        chave = int(valor["id"])
+    def inserir(self, chave_ou_registro, posicao: int | None = None) -> bool:
+        """
+        Insere a chave (CPF) e sua posição no arquivo físico.
+        Pode ser chamada de duas formas:
+          - inserir(cpf, posicao)
+          - inserir({"cpf": "...", "posicao": ...})
+        """
+        if isinstance(chave_ou_registro, dict) or hasattr(chave_ou_registro, "__getitem__") and not isinstance(chave_ou_registro, str):
+            chave = str(chave_ou_registro["cpf"]).strip()
+            posicao = int(chave_ou_registro["posicao"])
+        else:
+            chave = str(chave_ou_registro).strip()
+            if posicao is None:
+                raise ValueError("A posição no arquivo físico/DataFrame deve ser informada.")
+            posicao = int(posicao)
+
         if self.buscar(chave) is not None:
             return False
+
         raiz = self.raiz
         limite = 2 * self.grau_minimo - 1
         if len(raiz.chaves) == limite:
@@ -43,21 +60,21 @@ class ArvoreB:
             nova_raiz.filhos.append(raiz)
             self._dividir_filho(nova_raiz, 0)
             self.raiz = nova_raiz
-        self._inserir_nao_cheio(self.raiz, chave, valor)
+        self._inserir_nao_cheio(self.raiz, chave, posicao)
         self.quantidade += 1
         return True
 
-    def _inserir_nao_cheio(self, no: NoB, chave: int, valor: dict) -> None:
+    def _inserir_nao_cheio(self, no: NoB, chave: str, posicao: int) -> None:
         indice = len(no.chaves) - 1
         if no.folha:
-            no.chaves.append(0)
-            no.valores.append({})
+            no.chaves.append("")
+            no.valores.append(0)
             while indice >= 0 and chave < no.chaves[indice]:
                 no.chaves[indice + 1] = no.chaves[indice]
                 no.valores[indice + 1] = no.valores[indice]
                 indice -= 1
             no.chaves[indice + 1] = chave
-            no.valores[indice + 1] = valor
+            no.valores[indice + 1] = posicao
             return
 
         while indice >= 0 and chave < no.chaves[indice]:
@@ -67,7 +84,7 @@ class ArvoreB:
             self._dividir_filho(no, indice)
             if chave > no.chaves[indice]:
                 indice += 1
-        self._inserir_nao_cheio(no.filhos[indice], chave, valor)
+        self._inserir_nao_cheio(no.filhos[indice], chave, posicao)
 
     def _dividir_filho(self, pai: NoB, indice: int) -> None:
         grau = self.grau_minimo
@@ -86,25 +103,33 @@ class ArvoreB:
         pai.chaves.insert(indice, chave_mediana)
         pai.valores.insert(indice, valor_mediano)
 
-    def alterar(self, chave: int, valor: dict) -> bool:
-        existente = self.buscar(chave)
-        if existente is None:
-            return False
-        valor["id"] = int(chave)
-        existente.clear()
-        existente.update(valor)
-        return True
+    def alterar(self, chave: str | int, nova_posicao: int) -> bool:
+        """Atualiza a posição física associada ao CPF."""
+        chave_str = str(chave).strip()
+        return self._alterar_no(self.raiz, chave_str, int(nova_posicao))
 
-    def remover(self, chave: int) -> bool:
-        if self.buscar(chave) is None:
+    def _alterar_no(self, no: NoB, chave: str, nova_posicao: int) -> bool:
+        indice = 0
+        while indice < len(no.chaves) and chave > no.chaves[indice]:
+            indice += 1
+        if indice < len(no.chaves) and chave == no.chaves[indice]:
+            no.valores[indice] = nova_posicao
+            return True
+        if no.folha:
             return False
-        self._remover(self.raiz, chave)
+        return self._alterar_no(no.filhos[indice], chave, nova_posicao)
+
+    def remover(self, chave: str | int) -> bool:
+        chave_str = str(chave).strip()
+        if self.buscar(chave_str) is None:
+            return False
+        self._remover(self.raiz, chave_str)
         if not self.raiz.folha and not self.raiz.chaves:
             self.raiz = self.raiz.filhos[0]
         self.quantidade -= 1
         return True
 
-    def _remover(self, no: NoB, chave: int) -> None:
+    def _remover(self, no: NoB, chave: str) -> None:
         indice = 0
         while indice < len(no.chaves) and no.chaves[indice] < chave:
             indice += 1
@@ -141,12 +166,12 @@ class ArvoreB:
             self._fundir(no, indice)
             self._remover(no.filhos[indice], chave)
 
-    def _maximo(self, no: NoB) -> tuple[int, dict]:
+    def _maximo(self, no: NoB) -> tuple[str, int]:
         while not no.folha:
             no = no.filhos[-1]
         return no.chaves[-1], no.valores[-1]
 
-    def _minimo(self, no: NoB) -> tuple[int, dict]:
+    def _minimo(self, no: NoB) -> tuple[str, int]:
         while not no.folha:
             no = no.filhos[0]
         return no.chaves[0], no.valores[0]
@@ -186,15 +211,17 @@ class ArvoreB:
             filho.filhos.extend(irmao.filhos)
         pai.filhos.pop(indice + 1)
 
-    def listar_em_ordem(self) -> list[dict]:
-        registros: list[dict] = []
-        self._percorrer(self.raiz, registros)
-        return registros
+    def listar_em_ordem(self) -> list[tuple[str, int]]:
+        """Retorna os pares (cpf, posicao) ordenados pelo CPF."""
+        indices: list[tuple[str, int]] = []
+        self._percorrer(self.raiz, indices)
+        return indices
 
-    def _percorrer(self, no: NoB, registros: list[dict]) -> None:
-        for indice, valor in enumerate(no.valores):
+    def _percorrer(self, no: NoB, indices: list[tuple[str, int]]) -> None:
+        for indice, pos in enumerate(no.valores):
             if not no.folha:
-                self._percorrer(no.filhos[indice], registros)
-            registros.append(valor)
+                self._percorrer(no.filhos[indice], indices)
+            indices.append((no.chaves[indice], pos))
         if not no.folha:
-            self._percorrer(no.filhos[-1], registros)
+            self._percorrer(no.filhos[-1], indices)
+
