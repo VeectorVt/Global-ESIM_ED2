@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consulta Integrada | GlobalSIM</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100">
+    <main class="mx-auto max-w-4xl px-4 py-10 sm:px-6">
+        <header class="mb-8 flex flex-wrap items-center justify-between gap-4"><div><p class="font-bold uppercase tracking-[.25em] text-cyan-300">Árvore B × Tabela Hash</p><h1 class="mt-2 text-3xl font-black">Consulta de destino</h1><p class="mt-2 text-slate-300">Localize o cliente por ID, confira o eSIM/pacote e valide a cobertura do país.</p></div><a href="/" class="rounded-xl border border-white/20 px-4 py-2 font-semibold hover:bg-white/10">← Início</a></header>
+        {% with mensagens = get_flashed_messages(with_categories=true) %}{% if mensagens %}<div class="mb-6 space-y-2">{% for categoria, mensagem in mensagens %}<p role="alert" class="rounded-xl border px-4 py-3 font-semibold {{ 'border-red-400/40 bg-red-950 text-red-100' if categoria == 'erro' else 'border-emerald-400/40 bg-emerald-950 text-emerald-100' }}">{{ mensagem }}</p>{% endfor %}</div>{% endif %}{% endwith %}
+        <section class="rounded-3xl border border-white/10 bg-white p-6 text-slate-900 shadow-2xl sm:p-8">
+            <form method="post" class="grid gap-5 sm:grid-cols-[1fr_1fr_auto] sm:items-end"><label class="text-sm font-bold">ID do cliente<input required min="1" type="number" name="id" class="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3" placeholder="Ex.: 1"></label><label class="text-sm font-bold">Destino (código do país)<input required maxlength="2" minlength="2" pattern="[A-Za-z]{2}" name="destino" class="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 uppercase" placeholder="Ex.: IT"></label><button class="rounded-xl bg-cyan-600 px-6 py-3 font-extrabold text-white hover:bg-cyan-700">Consultar</button></form>
+            <p class="mt-4 text-sm leading-6 text-slate-500">Simulação acadêmica: uma consulta aprovada atualiza o último país e horário do cliente. Um salto entre regiões em menos de 2 horas gera bloqueio de suspeita.</p>
+        </section>
+        {% if resultado %}<section class="mt-6 rounded-3xl border p-6 {{ 'border-red-500 bg-red-950/60' if resultado.bloqueado else 'border-emerald-500 bg-emerald-950/60' }}"><div class="flex items-start gap-4"><span class="text-3xl">{{ '🚨' if resultado.bloqueado else '✅' }}</span><div class="min-w-0 flex-1"><h2 class="text-xl font-black">{{ 'Acesso bloqueado / suspeita' if resultado.bloqueado else 'Cobertura disponível' }}</h2><p class="mt-1 text-slate-200">{{ resultado.cliente.nome }} · Cliente #{{ resultado.cliente.id }} · {{ resultado.cliente.email }}</p><dl class="mt-5 grid gap-4 text-sm sm:grid-cols-2"><div><dt class="text-slate-300">eSIM</dt><dd class="font-bold">{{ resultado.cliente.esim }}</dd></div><div><dt class="text-slate-300">Pacote</dt><dd class="font-bold">{{ resultado.cliente.pacote }}</dd></div><div><dt class="text-slate-300">Destino</dt><dd class="font-bold">{{ resultado.pais.pais }} ({{ resultado.pais.codigo }}) · {{ resultado.pais.regiao }}</dd></div><div><dt class="text-slate-300">Operadora / tecnologia</dt><dd class="font-bold">{{ resultado.pais.operadora }} · {{ resultado.pais.tecnologia }}</dd></div><div><dt class="text-slate-300">Status eSIM</dt><dd class="font-bold">{{ resultado.cliente.status }}</dd></div></dl><p class="mt-4 text-xs text-slate-300">Geo-velocity é um alerta demonstrativo baseado em região e horário, não prova de fraude ou localização real.</p></div></div></section>{% endif %}
+        <footer class="mt-8 flex flex-wrap gap-3"><a class="rounded-xl bg-white/10 px-4 py-2 font-semibold hover:bg-white/20" href="/clientes">Gerenciar clientes</a><a class="rounded-xl bg-white/10 px-4 py-2 font-semibold hover:bg-white/20" href="/listagem_paises">Ver países da Tabela Hash</a></footer>
+    </main>
+</body>
+</html>
