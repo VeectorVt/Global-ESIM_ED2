@@ -27,9 +27,19 @@ def carregar_clientes() -> pd.DataFrame:
     if not CAMINHO_CLIENTES_JSON.exists():
         return pd.DataFrame()
     try:
-        df_clientes = pd.read_json(CAMINHO_CLIENTES_JSON)
+        df_clientes = pd.read_json(CAMINHO_CLIENTES_JSON, dtype={"cpf": str})
+        if not df_clientes.empty and "cpf" in df_clientes.columns:
+            df_clientes["cpf"] = (
+                df_clientes["cpf"]
+                .astype(str)
+                .str.replace(r"\.0$", "", regex=True)
+                .str.strip()
+                .str.zfill(11)
+            )
+        if not df_clientes.empty and "posicao" in df_clientes.columns:
+            df_clientes["posicao"] = pd.to_numeric(df_clientes["posicao"], errors="coerce").fillna(0).astype(int)
         return df_clientes
-    except (json.JSONDecodeError, OSError):
+    except (json.JSONDecodeError, OSError, ValueError):
         return pd.DataFrame()
 
 

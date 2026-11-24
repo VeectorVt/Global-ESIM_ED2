@@ -17,6 +17,7 @@ class TestArvoreB(unittest.TestCase):
                 self.assertEqual(len(no.filhos), len(no.chaves) + 1)
                 for filho in no.filhos:
                     visitar(filho, profundidade + 1, folhas)
+
         folhas = set()
         visitar(arvore.raiz, 0, folhas)
         self.assertLessEqual(len(folhas), 1)
@@ -24,25 +25,29 @@ class TestArvoreB(unittest.TestCase):
 
     def test_insercao_busca_duplicidade_e_ordem(self):
         arvore = ArvoreB(grau_minimo=3)
-        for chave in range(1000, 0, -1):
-            self.assertTrue(arvore.inserir({"id": chave, "nome": f"Cliente {chave}"}))
-        self.assertFalse(arvore.inserir({"id": 500, "nome": "Duplicado"}))
-        self.assertEqual(arvore.buscar(500)["nome"], "Cliente 500")
-        self.assertIsNone(arvore.buscar(1001))
-        self.assertEqual([item["id"] for item in arvore.listar_em_ordem()], list(range(1, 1001)))
+        for numero in range(1000, 0, -1):
+            cpf = f"{numero:011d}"
+            self.assertTrue(arvore.inserir(cpf, numero - 1))
+        self.assertFalse(arvore.inserir("00000000500", 9999))
+        self.assertEqual(arvore.buscar("00000000500"), 499)
+        self.assertIsNone(arvore.buscar("00000001001"))
+        pares = arvore.listar_em_ordem()
+        self.assertEqual([cpf for cpf, _ in pares], sorted(cpf for cpf, _ in pares))
+        self.assertEqual(len(pares), 1000)
         self.validar_invariantes(arvore)
 
     def test_alteracao_e_remocao_com_rebalanceamento(self):
         arvore = ArvoreB(grau_minimo=2)
-        for chave in range(1, 151):
-            arvore.inserir({"id": chave, "nome": str(chave)})
-        self.assertTrue(arvore.alterar(75, {"id": 75, "nome": "Atualizado"}))
-        self.assertEqual(arvore.buscar(75)["nome"], "Atualizado")
-        for chave in list(range(1, 151))[::2] + list(range(2, 151))[::2]:
-            self.assertTrue(arvore.remover(chave))
+        cpfs = [f"{chave:011d}" for chave in range(1, 151)]
+        for posicao, cpf in enumerate(cpfs):
+            arvore.inserir(cpf, posicao)
+        self.assertTrue(arvore.alterar("00000000075", 999))
+        self.assertEqual(arvore.buscar("00000000075"), 999)
+        for cpf in cpfs[::2] + cpfs[1::2]:
+            self.assertTrue(arvore.remover(cpf))
             self.validar_invariantes(arvore)
         self.assertEqual(arvore.listar_em_ordem(), [])
-        self.assertFalse(arvore.remover(75))
+        self.assertFalse(arvore.remover("00000000075"))
 
 
 if __name__ == "__main__":
